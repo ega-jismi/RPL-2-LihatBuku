@@ -62,7 +62,7 @@ public class DetailBukuForm extends JFrame {
         JLabel lblSpec = new JLabel("Format Berkas: PDF Digital • Jumlah: " + book.getTotalPages() + " Halaman");
         lblSpec.setForeground(Color.DARK_GRAY);
 
-        DecimalFormat df = new DecimalFormat("#.0");
+        DecimalFormat df = new DecimalFormat("0.0");
         lblRatingAverage = new JLabel("Nilai Evaluasi: " + df.format(book.getRating()) + " / 5.0 (" + book.getReviewCount() + " Masukan)");
         lblRatingAverage.setFont(new Font("Segoe UI", Font.BOLD, 12));
         lblRatingAverage.setForeground(new Color(175, 96, 26));
@@ -212,7 +212,7 @@ public class DetailBukuForm extends JFrame {
 
         // Update rating rata-rata
         double avg = reviewDAO.calculateAverageRating(book.getId());
-        DecimalFormat df = new DecimalFormat("#.0");
+        DecimalFormat df = new DecimalFormat("0.0");
         lblRatingAverage.setText("Nilai Evaluasi: " + df.format(avg) + " / 5.0 (" + list.size() + " Masukan)");
         bookDAO.updateRating(book.getId(), avg, list.size());
     }

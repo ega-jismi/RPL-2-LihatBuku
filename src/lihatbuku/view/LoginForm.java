@@ -59,8 +59,10 @@ public class LoginForm extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(6, 6, 6, 6);
 
-        txtUsername = new JTextField("ega_jismi", 16);
-        txtPassword = new JPasswordField("12345", 16);
+        txtUsername = new JTextField(16);
+        txtUsername.setToolTipText("Contoh: admin atau username terdaftar");
+        txtPassword = new JPasswordField(16);
+        txtPassword.setToolTipText("Masukkan kata sandi");
 
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.35;
         formPanel.add(new JLabel("Nama Pengguna:"), gbc);
@@ -72,6 +74,11 @@ public class LoginForm extends JFrame {
         gbc.gridx = 1; gbc.gridy = 1; gbc.weightx = 0.65;
         formPanel.add(txtPassword, gbc);
 
+        JLabel lblHint = new JLabel("Contoh: admin atau username terdaftar");
+        lblHint.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblHint.setForeground(new Color(110, 125, 140));
+        gbc.gridx = 1; gbc.gridy = 2; gbc.weightx = 0.65;
+        formPanel.add(lblHint, gbc);
         // Tombol Aksi
         JPanel btnPanel = new JPanel(new GridLayout(3, 1, 0, 8));
         btnPanel.setOpaque(false);
@@ -92,7 +99,7 @@ public class LoginForm extends JFrame {
         btnPanel.add(btnGuest);
         btnPanel.add(btnToRegister);
 
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
         gbc.insets = new Insets(14, 6, 6, 6);
         formPanel.add(btnPanel, gbc);
 

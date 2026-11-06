@@ -48,8 +48,12 @@ public class UserSession {
         return "GUEST".equalsIgnoreCase(this.role);
     }
 
+    public boolean isAdmin() {
+        return "ADMIN".equalsIgnoreCase(this.role);
+    }
+
     public boolean isRegistered() {
-        return "REGISTERED".equalsIgnoreCase(this.role);
+        return "REGISTERED".equalsIgnoreCase(this.role) || isAdmin();
     }
 
     public int getUserId() { return userId; }

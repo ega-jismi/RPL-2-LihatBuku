@@ -1,24 +1,13 @@
 package lihatbuku.dao;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 import lihatbuku.koneksi.Koneksi;
 import lihatbuku.model.User;
 
 /**
- * Data Access Object untuk entitas pengguna.
+ * Data Access Object untuk entitas pengguna (tabel: users).
  */
 public class UserDAO {
-
-    // Fallback in-memory ketika server MySQL offline
-    private static final List<User> mockUsers = new ArrayList<>();
-
-    static {
-        mockUsers.add(new User(1, "ega_jismi", "12345", "Ega Jismi Saputra", "REGISTERED"));
-        mockUsers.add(new User(2, "budi_s", "12345", "Budi Santoso", "REGISTERED"));
-        mockUsers.add(new User(3, "siti_r", "12345", "Siti Rahma", "REGISTERED"));
-    }
 
     public User login(String username, String password) {
         Connection conn = Koneksi.getConnection();
@@ -40,13 +29,6 @@ public class UserDAO {
                 }
             } catch (SQLException e) {
                 System.err.println("UserDAO.login error: " + e.getMessage());
-            }
-        }
-
-        // Fallback in-memory
-        for (User u : mockUsers) {
-            if (u.getUsername().equalsIgnoreCase(username) && u.getPassword().equals(password)) {
-                return u;
             }
         }
         return null;
@@ -72,12 +54,7 @@ public class UserDAO {
                 System.err.println("UserDAO.register error: " + e.getMessage());
             }
         }
-
-        // Fallback in-memory
-        user.setId(mockUsers.size() + 1);
-        user.setRole("REGISTERED");
-        mockUsers.add(user);
-        return true;
+        return false;
     }
 
     public boolean isUsernameTaken(String username) {
@@ -92,10 +69,6 @@ public class UserDAO {
             } catch (SQLException e) {
                 System.err.println("UserDAO.isUsernameTaken error: " + e.getMessage());
             }
-        }
-
-        for (User u : mockUsers) {
-            if (u.getUsername().equalsIgnoreCase(username)) return true;
         }
         return false;
     }

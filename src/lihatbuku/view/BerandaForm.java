@@ -11,6 +11,7 @@ import javax.swing.table.DefaultTableModel;
 import lihatbuku.dao.BookDAO;
 import lihatbuku.model.Book;
 import lihatbuku.session.UserSession;
+import lihatbuku.koneksi.Koneksi;
 
 /**
  * Tampilan katalog koleksi buku digital.
@@ -32,6 +33,7 @@ public class BerandaForm extends JFrame {
     private static final Color COLOR_HEADER_BG = new Color(241, 245, 249);  
     private static final Color COLOR_SELECTION = new Color(224, 242, 254);  
     private static final Color COLOR_SELECTION_TXT = new Color(3, 105, 161);
+    private static final Color COLOR_RED = new Color(220, 38, 38);
 
     // Token Tipografi
     private static final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 15);
@@ -58,7 +60,13 @@ public class BerandaForm extends JFrame {
     private JTextArea txtPreviewSynopsis;
     private JButton btnReadPdf;
     private JButton btnDetailReview;
+    private JButton btnAdminAdd;
+    private JPanel panelAdminActions;
+    private JButton btnAdminEdit;
+    private JButton btnAdminDelete;
 
+    private JLabel lblDbStatus;
+    private JLabel lblStatusLeft;
     private List<Book> displayedBooks;
     private Book selectedBook;
 
@@ -79,6 +87,7 @@ public class BerandaForm extends JFrame {
         add(createHeaderPanel(), BorderLayout.NORTH);
         add(createMainContent(), BorderLayout.CENTER);
         add(createStatusBar(), BorderLayout.SOUTH);
+        updateAdminControlsVisibility();
     }
 
     private JPanel createHeaderPanel() {
@@ -160,7 +169,16 @@ public class BerandaForm extends JFrame {
     }
 
     private void updateBadgeStyle(UserSession session) {
-        if (session.isRegistered()) {
+        if (session.isAdmin()) {
+            lblUserBadge.setText("Sesi: ADMINISTRATOR (" + session.getFullName() + ")");
+            lblUserBadge.setForeground(COLOR_RED);
+            lblUserBadge.setOpaque(true);
+            lblUserBadge.setBackground(new Color(254, 226, 226));
+            lblUserBadge.setBorder(BorderFactory.createCompoundBorder(
+                    new LineBorder(new Color(252, 165, 165), 1),
+                    new EmptyBorder(4, 10, 4, 10)
+            ));
+        } else if (session.isRegistered()) {
             lblUserBadge.setText("Sesi: Mahasiswa Terdaftar (" + session.getFullName() + ")");
             lblUserBadge.setForeground(COLOR_GREEN);
             lblUserBadge.setOpaque(true);
@@ -224,7 +242,7 @@ public class BerandaForm extends JFrame {
         filterBar.add(lblCategory);
 
         cmbGenreFilter = new JComboBox<>(new String[]{
-                "Semua Kategori", "Teknologi", "Bisnis", "Desain", "Manajemen", "Sains"
+                "Semua Kategori", "Teknologi", "Bisnis", "Desain", "Manajemen", "Sains", "Lainnya"
         });
         cmbGenreFilter.setFont(FONT_BODY);
         cmbGenreFilter.setBackground(COLOR_SURFACE);
@@ -243,6 +261,9 @@ public class BerandaForm extends JFrame {
         });
         filterBar.add(btnReset);
 
+        btnAdminAdd = UIUtils.createPrimaryButton("+ Tambah Buku", COLOR_GREEN);
+        btnAdminAdd.addActionListener(e -> handleAdminAddBook());
+        filterBar.add(btnAdminAdd);
         panel.add(filterBar, BorderLayout.NORTH);
 
         // Master-Detail Split Pane
@@ -373,7 +394,29 @@ public class BerandaForm extends JFrame {
 
         pActions.add(btnReadPdf);
         pActions.add(btnDetailReview);
-        previewPanel.add(pActions, BorderLayout.SOUTH);
+
+        panelAdminActions = new JPanel(new GridLayout(1, 2, 8, 0));
+        panelAdminActions.setOpaque(false);
+        panelAdminActions.setBorder(new EmptyBorder(8, 0, 0, 0));
+
+        btnAdminEdit = UIUtils.createSecondaryButton("✎ Edit Buku");
+        btnAdminEdit.setEnabled(false);
+        btnAdminEdit.addActionListener(e -> handleAdminEditBook());
+
+        btnAdminDelete = UIUtils.createPrimaryButton("🗑 Hapus Buku", COLOR_RED);
+        btnAdminDelete.setEnabled(false);
+        btnAdminDelete.addActionListener(e -> handleAdminDeleteBook());
+
+        panelAdminActions.add(btnAdminEdit);
+        panelAdminActions.add(btnAdminDelete);
+
+        JPanel bottomContainer = new JPanel();
+        bottomContainer.setLayout(new BoxLayout(bottomContainer, BoxLayout.Y_AXIS));
+        bottomContainer.setOpaque(false);
+        bottomContainer.add(pActions);
+        bottomContainer.add(panelAdminActions);
+
+        previewPanel.add(bottomContainer, BorderLayout.SOUTH);
 
         split.setRightComponent(previewPanel);
         panel.add(split, BorderLayout.CENTER);
@@ -389,22 +432,43 @@ public class BerandaForm extends JFrame {
         ));
         bar.setBackground(COLOR_HEADER_BG);
 
-        JLabel lblLeft = new JLabel("Format berkas: Dokumen PDF (*.pdf) • Sesi Aktif: " + UserSession.getInstance().getUsername());
-        lblLeft.setFont(FONT_META);
-        lblLeft.setForeground(COLOR_TEXT_MUTED);
+        lblStatusLeft = new JLabel("Format berkas: Dokumen PDF (*.pdf) • Sesi Aktif: " + UserSession.getInstance().getUsername());
+        lblStatusLeft.setFont(FONT_META);
+        lblStatusLeft.setForeground(COLOR_TEXT_MUTED);
+
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 0));
+        rightPanel.setOpaque(false);
+
+        lblDbStatus = new JLabel();
+        lblDbStatus.setFont(FONT_META);
+        updateDbStatus();
+        rightPanel.add(lblDbStatus);
 
         JLabel lblRight = new JLabel("LihatBuku");
         lblRight.setFont(FONT_META);
         lblRight.setForeground(COLOR_TEXT_MUTED);
+        rightPanel.add(lblRight);
 
-        bar.add(lblLeft, BorderLayout.WEST);
-        bar.add(lblRight, BorderLayout.EAST);
+        bar.add(lblStatusLeft, BorderLayout.WEST);
+        bar.add(rightPanel, BorderLayout.EAST);
         return bar;
+    }
+
+    public void updateDbStatus() {
+        if (lblDbStatus == null) return;
+        if (Koneksi.isConnected()) {
+            lblDbStatus.setText("● Database: Terhubung");
+            lblDbStatus.setForeground(COLOR_GREEN);
+        } else {
+            lblDbStatus.setText("● Database: Terputus (Offline)");
+            lblDbStatus.setForeground(COLOR_RED);
+        }
     }
 
     public void loadBooks() {
         this.displayedBooks = bookDAO.getAllBooks();
         renderTable();
+        updateDbStatus();
     }
 
     private void applyFilter() {
@@ -416,7 +480,7 @@ public class BerandaForm extends JFrame {
 
     private void renderTable() {
         modelTable.setRowCount(0);
-        DecimalFormat df = new DecimalFormat("#.0");
+        DecimalFormat df = new DecimalFormat("0.0");
         for (Book b : displayedBooks) {
             modelTable.addRow(new Object[]{
                     b.getId(),
@@ -431,6 +495,7 @@ public class BerandaForm extends JFrame {
             tblBooks.setRowSelectionInterval(0, 0);
             showPreview(displayedBooks.get(0));
         } else {
+            selectedBook = null;
             lblPreviewTitle.setText("Tidak ada dokumen sesuai filter");
             lblPreviewAuthor.setText("-");
             lblPreviewCategory.setText("-");
@@ -438,21 +503,23 @@ public class BerandaForm extends JFrame {
             txtPreviewSynopsis.setText("");
             btnReadPdf.setEnabled(false);
             btnDetailReview.setEnabled(false);
+            if (btnAdminEdit != null) btnAdminEdit.setEnabled(false);
+            if (btnAdminDelete != null) btnAdminDelete.setEnabled(false);
         }
     }
-
     private void showPreview(Book b) {
         this.selectedBook = b;
         lblPreviewTitle.setText(b.getTitle());
         lblPreviewAuthor.setText("Penulis: " + b.getAuthor());
         lblPreviewCategory.setText("Kategori: " + b.getGenre() + " • Total: " + b.getTotalPages() + " Halaman Buku");
-        DecimalFormat df = new DecimalFormat("#.0");
+        DecimalFormat df = new DecimalFormat("0.0");
         lblPreviewRating.setText("Nilai Evaluasi: " + df.format(b.getRating()) + " / 5.0 (" + b.getReviewCount() + " Masukan)");
         txtPreviewSynopsis.setText(b.getSynopsis());
         btnReadPdf.setEnabled(true);
         btnDetailReview.setEnabled(true);
+        if (btnAdminEdit != null) btnAdminEdit.setEnabled(true);
+        if (btnAdminDelete != null) btnAdminDelete.setEnabled(true);
     }
-
     private void handleAuthAction() {
         UserSession session = UserSession.getInstance();
         if (session.isRegistered()) {
@@ -477,5 +544,52 @@ public class BerandaForm extends JFrame {
         UserSession session = UserSession.getInstance();
         updateBadgeStyle(session);
         updateAuthButtonStyle(session);
+        updateAdminControlsVisibility();
+        if (lblStatusLeft != null) {
+            lblStatusLeft.setText("Format berkas: Dokumen PDF (*.pdf) • Sesi Aktif: " + session.getUsername());
+        }
+    }
+
+    private void updateAdminControlsVisibility() {
+        boolean isAdmin = UserSession.getInstance().isAdmin();
+        if (btnAdminAdd != null) btnAdminAdd.setVisible(isAdmin);
+        if (panelAdminActions != null) panelAdminActions.setVisible(isAdmin);
+    }
+
+    private void handleAdminAddBook() {
+        BookFormDialog dlg = new BookFormDialog(this, null);
+        dlg.setVisible(true);
+        if (dlg.isSaved()) {
+            loadBooks();
+        }
+    }
+
+    private void handleAdminEditBook() {
+        if (selectedBook != null) {
+            BookFormDialog dlg = new BookFormDialog(this, selectedBook);
+            dlg.setVisible(true);
+            if (dlg.isSaved()) {
+                loadBooks();
+            }
+        }
+    }
+
+    private void handleAdminDeleteBook() {
+        if (selectedBook != null) {
+            int opt = JOptionPane.showConfirmDialog(this,
+                    "Apakah Anda yakin ingin menghapus buku berikut?\n\"" + selectedBook.getTitle() + "\"",
+                    "Konfirmasi Hapus Buku",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (opt == JOptionPane.YES_OPTION) {
+                boolean ok = bookDAO.deleteBook(selectedBook.getId());
+                if (ok) {
+                    JOptionPane.showMessageDialog(this, "Buku berhasil dihapus.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    loadBooks();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Gagal menghapus buku dari database.", "Kesalahan", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }
     }
 }
