@@ -11,7 +11,7 @@ import javax.swing.table.DefaultTableModel;
 import lihatbuku.dao.BookDAO;
 import lihatbuku.model.Book;
 import lihatbuku.session.UserSession;
-import lihatbuku.koneksi.Koneksi;
+import lihatbuku.koneksi.HibernateUtil;
 
 /**
  * Tampilan katalog koleksi buku digital.
@@ -456,7 +456,7 @@ public class BerandaForm extends JFrame {
 
     public void updateDbStatus() {
         if (lblDbStatus == null) return;
-        if (Koneksi.isConnected()) {
+        if (HibernateUtil.isConnected()) {
             lblDbStatus.setText("● Database: Terhubung");
             lblDbStatus.setForeground(COLOR_GREEN);
         } else {

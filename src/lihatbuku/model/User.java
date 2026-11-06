@@ -1,15 +1,30 @@
 package lihatbuku.model;
 
+import jakarta.persistence.*;
+
 /**
  * Model data akun pengguna (Pengguna Tamu & Terdaftar).
  */
+@Entity
+@Table(name = "users")
 public class User {
-    private int id;
-    private String username;
-    private String password;
-    private String fullName;
-    private String role; // "GUEST" atau "REGISTERED"
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private int id;
+
+    @Column(name = "username", nullable = false, unique = true, length = 50)
+    private String username;
+
+    @Column(name = "password", nullable = false)
+    private String password;
+
+    @Column(name = "full_name")
+    private String fullName;
+
+    @Column(name = "role")
+    private String role; // "GUEST", "REGISTERED", "ADMIN"
     public User() {}
 
     public User(int id, String username, String password, String fullName, String role) {

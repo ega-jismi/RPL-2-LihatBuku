@@ -1,73 +1,69 @@
 package lihatbuku.dao;
 
-import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import lihatbuku.koneksi.Koneksi;
+import lihatbuku.koneksi.HibernateUtil;
 import lihatbuku.model.Review;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
 
 /**
- * Data Access Object untuk ulasan dan penilaian (tabel: reviews).
+ * Data Access Object untuk ulasan dan penilaian menggunakan Hibernate ORM.
  */
 public class ReviewDAO {
 
     public List<Review> getReviewsByBookId(int bookId) {
-        List<Review> list = new ArrayList<>();
-        Connection conn = Koneksi.getConnection();
-        if (conn != null) {
-            String sql = "SELECT r.id, r.book_id, r.user_id, u.full_name, r.rating, r.comment, r.created_at "
-                    + "FROM reviews r JOIN users u ON r.user_id = u.id "
-                    + "WHERE r.book_id = ? ORDER BY r.created_at DESC";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, bookId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        list.add(new Review(
-                                rs.getInt("id"),
-                                rs.getInt("book_id"),
-                                rs.getInt("user_id"),
-                                rs.getString("full_name"),
-                                rs.getInt("rating"),
-                                rs.getString("comment"),
-                                rs.getString("created_at")
-                        ));
-                    }
-                }
-            } catch (SQLException e) {
-                System.err.println("ReviewDAO.getReviewsByBookId error: " + e.getMessage());
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        if (sf == null) return new ArrayList<>();
+        try (Session session = sf.openSession()) {
+            List<Object[]> rows = session.createQuery(
+                    "SELECT r, u.fullName FROM Review r, User u WHERE r.userId = u.id AND r.bookId = :b ORDER BY r.id DESC",
+                    Object[].class)
+                    .setParameter("b", bookId)
+                    .list();
+            List<Review> list = new ArrayList<>();
+            for (Object[] row : rows) {
+                Review r = (Review) row[0];
+                r.setUserName((String) row[1]);
+                list.add(r);
             }
+            return list;
+        } catch (Exception e) {
+            System.err.println("ReviewDAO.getReviewsByBookId error: " + e.getMessage());
+            return new ArrayList<>();
         }
-        return list;
     }
 
     public boolean addReview(Review review) {
-        Connection conn = Koneksi.getConnection();
-        if (conn != null) {
-            String sql = "INSERT INTO reviews (book_id, user_id, rating, comment, created_at) VALUES (?, ?, ?, ?, NOW())";
-            try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                ps.setInt(1, review.getBookId());
-                ps.setInt(2, review.getUserId());
-                ps.setInt(3, review.getRating());
-                ps.setString(4, review.getComment());
-                int affected = ps.executeUpdate();
-                if (affected > 0) {
-                    try (ResultSet rs = ps.getGeneratedKeys()) {
-                        if (rs.next()) review.setId(rs.getInt(1));
-                    }
-                    return true;
-                }
-            } catch (SQLException e) {
-                System.err.println("ReviewDAO.addReview error: " + e.getMessage());
-            }
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        if (sf == null) return false;
+        Transaction tx = null;
+        try (Session session = sf.openSession()) {
+            tx = session.beginTransaction();
+            session.persist(review);
+            tx.commit();
+            return true;
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+            System.err.println("ReviewDAO.addReview error: " + e.getMessage());
+            return false;
         }
-        return false;
     }
 
     public double calculateAverageRating(int bookId) {
-        List<Review> reviews = getReviewsByBookId(bookId);
-        if (reviews.isEmpty()) return 0.0;
-        double sum = 0;
-        for (Review r : reviews) sum += r.getRating();
-        return sum / reviews.size();
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        if (sf == null) return 0.0;
+        try (Session session = sf.openSession()) {
+            Double avg = session.createQuery(
+                    "SELECT coalesce(avg(cast(r.rating as double)), 0.0) FROM Review r WHERE r.bookId = :b",
+                    Double.class)
+                    .setParameter("b", bookId)
+                    .uniqueResult();
+            return (avg != null) ? Math.round(avg * 10.0) / 10.0 : 0.0;
+        } catch (Exception e) {
+            System.err.println("ReviewDAO.calculateAverageRating error: " + e.getMessage());
+            return 0.0;
+        }
     }
 }

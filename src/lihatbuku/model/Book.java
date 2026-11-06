@@ -1,20 +1,45 @@
 package lihatbuku.model;
 
+import jakarta.persistence.*;
+
 /**
  * Model entitas berkas buku digital PDF.
  */
+@Entity
+@Table(name = "books")
 public class Book {
-    private int id;
-    private String title;
-    private String author;
-    private String genre;
-    private int totalPages;
-    private String synopsis;
-    private String pdfPath;
-    private String coverPath;
-    private double rating;
-    private int reviewCount;
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private int id;
+
+    @Column(name = "title", nullable = false)
+    private String title;
+
+    @Column(name = "author", nullable = false)
+    private String author;
+
+    @Column(name = "genre", nullable = false)
+    private String genre;
+
+    @Column(name = "total_pages", nullable = false)
+    private int totalPages;
+
+    @Column(name = "synopsis", columnDefinition = "TEXT")
+    private String synopsis;
+
+    @Column(name = "pdf_path")
+    private String pdfPath;
+
+    @Column(name = "cover_path")
+    private String coverPath;
+
+    @Column(name = "rating")
+    private double rating;
+
+    @Column(name = "review_count")
+    private int reviewCount;
     public Book() {}
 
     public Book(int id, String title, String author, String genre, int totalPages,

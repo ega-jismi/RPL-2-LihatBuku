@@ -1,81 +1,90 @@
 package lihatbuku.dao;
 
-import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import lihatbuku.koneksi.Koneksi;
+import lihatbuku.koneksi.HibernateUtil;
 import lihatbuku.model.ReadingHistory;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
 
 /**
- * Data Access Object untuk penanda riwayat bacaan (tabel: reading_history).
+ * Data Access Object untuk penanda riwayat bacaan menggunakan Hibernate ORM.
  */
 public class ReadingHistoryDAO {
 
     public List<ReadingHistory> getHistoryByUserId(int userId) {
-        List<ReadingHistory> list = new ArrayList<>();
-        Connection conn = Koneksi.getConnection();
-        if (conn != null) {
-            String sql = "SELECT h.id, h.user_id, h.book_id, b.title, b.genre, h.last_page, b.total_pages, h.last_read_at "
-                    + "FROM reading_history h "
-                    + "JOIN books b ON h.book_id = b.id "
-                    + "WHERE h.user_id = ? ORDER BY h.last_read_at DESC";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, userId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        list.add(new ReadingHistory(
-                                rs.getInt("id"),
-                                rs.getInt("user_id"),
-                                rs.getInt("book_id"),
-                                rs.getString("title"),
-                                rs.getString("genre"),
-                                rs.getInt("last_page"),
-                                rs.getInt("total_pages"),
-                                rs.getString("last_read_at")
-                        ));
-                    }
-                }
-            } catch (SQLException e) {
-                System.err.println("ReadingHistoryDAO.getHistoryByUserId error: " + e.getMessage());
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        if (sf == null) return new ArrayList<>();
+        try (Session session = sf.openSession()) {
+            List<Object[]> rows = session.createQuery(
+                    "SELECT h, b.title, b.genre, b.totalPages FROM ReadingHistory h, Book b "
+                    + "WHERE h.bookId = b.id AND h.userId = :u ORDER BY h.lastReadAt DESC",
+                    Object[].class)
+                    .setParameter("u", userId)
+                    .list();
+            List<ReadingHistory> list = new ArrayList<>();
+            for (Object[] row : rows) {
+                ReadingHistory h = (ReadingHistory) row[0];
+                h.setBookTitle((String) row[1]);
+                h.setBookGenre((String) row[2]);
+                h.setTotalPages((Integer) row[3]);
+                list.add(h);
             }
+            return list;
+        } catch (Exception e) {
+            System.err.println("ReadingHistoryDAO.getHistoryByUserId error: " + e.getMessage());
+            return new ArrayList<>();
         }
-        return list;
     }
 
     public boolean saveOrUpdateHistory(int userId, int bookId, String bookTitle, String bookGenre, int lastPage, int totalPages) {
-        Connection conn = Koneksi.getConnection();
-        if (conn != null) {
-            String sql = "INSERT INTO reading_history (user_id, book_id, last_page, last_read_at) "
-                    + "VALUES (?, ?, ?, NOW()) "
-                    + "ON DUPLICATE KEY UPDATE last_page = VALUES(last_page), last_read_at = NOW()";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, userId);
-                ps.setInt(2, bookId);
-                ps.setInt(3, lastPage);
-                return ps.executeUpdate() > 0;
-            } catch (SQLException e) {
-                System.err.println("ReadingHistoryDAO.saveOrUpdateHistory error: " + e.getMessage());
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        if (sf == null) return false;
+        Transaction tx = null;
+        try (Session session = sf.openSession()) {
+            tx = session.beginTransaction();
+            ReadingHistory hist = session.createQuery(
+                    "FROM ReadingHistory WHERE userId = :u AND bookId = :b", ReadingHistory.class)
+                    .setParameter("u", userId)
+                    .setParameter("b", bookId)
+                    .uniqueResult();
+
+            if (hist != null) {
+                hist.setLastPage(lastPage);
+                hist.setLastReadAtDateTime(LocalDateTime.now());
+                session.merge(hist);
+            } else {
+                ReadingHistory newHist = new ReadingHistory();
+                newHist.setUserId(userId);
+                newHist.setBookId(bookId);
+                newHist.setLastPage(lastPage);
+                newHist.setLastReadAtDateTime(LocalDateTime.now());
+                session.persist(newHist);
             }
+            tx.commit();
+            return true;
+        } catch (Exception e) {
+            if (tx != null) tx.rollback();
+            System.err.println("ReadingHistoryDAO.saveOrUpdateHistory error: " + e.getMessage());
+            return false;
         }
-        return false;
     }
 
     public int getLastReadPage(int userId, int bookId) {
-        Connection conn = Koneksi.getConnection();
-        if (conn != null) {
-            String sql = "SELECT last_page FROM reading_history WHERE user_id = ? AND book_id = ?";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, userId);
-                ps.setInt(2, bookId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        return rs.getInt("last_page");
-                    }
-                }
-            } catch (SQLException e) {
-                System.err.println("ReadingHistoryDAO.getLastReadPage error: " + e.getMessage());
-            }
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        if (sf == null) return 1;
+        try (Session session = sf.openSession()) {
+            Integer page = session.createQuery(
+                    "SELECT h.lastPage FROM ReadingHistory h WHERE h.userId = :u AND h.bookId = :b", Integer.class)
+                    .setParameter("u", userId)
+                    .setParameter("b", bookId)
+                    .uniqueResult();
+            return (page != null && page > 0) ? page : 1;
+        } catch (Exception e) {
+            System.err.println("ReadingHistoryDAO.getLastReadPage error: " + e.getMessage());
+            return 1;
         }
-        return 1;
     }
 }
