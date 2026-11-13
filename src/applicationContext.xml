@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!--
+        Konteks Spring untuk aplikasi LihatBuku.
+
+        Nilai koneksi disamakan dengan src/hibernate.cfg.xml:
+        database db_lihatbuku di localhost:3306, user root tanpa password.
+
+        Aplikasi desktop saat ini tetap berjalan melalui HibernateUtil yang membaca
+        hibernate.cfg.xml. Konteks ini menyediakan DataSource, SessionFactory,
+        transaction manager, dan bean DAO untuk pemakaian Spring.
+    -->
+
+    <!-- 1. DataSource MySQL -->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="com.mysql.cj.jdbc.Driver"/>
+        <property name="url"
+                  value="jdbc:mysql://localhost:3306/db_lihatbuku?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=Asia/Jakarta"/>
+        <property name="username" value="root"/>
+        <property name="password" value=""/>
+    </bean>
+
+    <!-- 2. Hibernate SessionFactory, memindai entitas @Entity di lihatbuku.model -->
+    <bean id="sessionFactory" class="org.springframework.orm.jpa.hibernate.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="packagesToScan" value="lihatbuku.model"/>
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.show_sql">false</prop>
+                <prop key="hibernate.format_sql">true</prop>
+                <prop key="hibernate.hbm2ddl.auto">update</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!-- 3. Manajer transaksi Hibernate -->
+    <bean id="transactionManager" class="org.springframework.orm.jpa.hibernate.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory"/>
+    </bean>
+
+    <!-- 4. DAO aplikasi -->
+    <bean id="bookDAO" class="lihatbuku.dao.BookDAO"/>
+    <bean id="userDAO" class="lihatbuku.dao.UserDAO"/>
+    <bean id="reviewDAO" class="lihatbuku.dao.ReviewDAO"/>
+    <bean id="readingHistoryDAO" class="lihatbuku.dao.ReadingHistoryDAO"/>
+
+</beans>

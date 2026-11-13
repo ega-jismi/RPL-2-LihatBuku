@@ -1,4 +1,5 @@
 /build/
 /dist/
+/target/
 nbproject/private/
 buildclasses/
