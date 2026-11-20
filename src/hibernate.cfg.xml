@@ -25,5 +25,6 @@
         <mapping class="lihatbuku.model.User"/>
         <mapping class="lihatbuku.model.Review"/>
         <mapping class="lihatbuku.model.ReadingHistory"/>
+        <mapping class="lihatbuku.model.MembershipTransaction"/>
     </session-factory>
 </hibernate-configuration>

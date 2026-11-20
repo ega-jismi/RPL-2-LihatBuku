@@ -25,7 +25,7 @@
     </bean>
 
     <!-- 2. Hibernate SessionFactory, memindai entitas @Entity di lihatbuku.model -->
-    <bean id="sessionFactory" class="org.springframework.orm.jpa.hibernate.LocalSessionFactoryBean">
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
         <property name="dataSource" ref="dataSource"/>
         <property name="packagesToScan" value="lihatbuku.model"/>
         <property name="hibernateProperties">
@@ -38,7 +38,7 @@
     </bean>
 
     <!-- 3. Manajer transaksi Hibernate -->
-    <bean id="transactionManager" class="org.springframework.orm.jpa.hibernate.HibernateTransactionManager">
+    <bean id="transactionManager" class="org.springframework.orm.hibernate5.HibernateTransactionManager">
         <property name="sessionFactory" ref="sessionFactory"/>
     </bean>
 
@@ -47,5 +47,6 @@
     <bean id="userDAO" class="lihatbuku.dao.UserDAO"/>
     <bean id="reviewDAO" class="lihatbuku.dao.ReviewDAO"/>
     <bean id="readingHistoryDAO" class="lihatbuku.dao.ReadingHistoryDAO"/>
+    <bean id="membershipTransactionDAO" class="lihatbuku.dao.MembershipTransactionDAO"/>
 
 </beans>

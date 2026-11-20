@@ -61,6 +61,7 @@ public class BerandaForm extends JFrame {
     private JButton btnReadPdf;
     private JButton btnDetailReview;
     private JButton btnAdminAdd;
+    private JButton btnAdminReport;
     private JPanel panelAdminActions;
     private JButton btnAdminEdit;
     private JButton btnAdminDelete;
@@ -118,6 +119,19 @@ public class BerandaForm extends JFrame {
         lblUserBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
         updateBadgeStyle(session);
 
+        JButton btnMembership = UIUtils.createPrimaryButton("Langganan VIP", COLOR_AMBER);
+        btnMembership.addActionListener(e -> {
+            UserSession s = UserSession.getInstance();
+            if (s.isGuest()) {
+                JOptionPane.showMessageDialog(this,
+                        "Silakan masuk akun terlebih dahulu untuk melakukan transaksi membership.",
+                        "Perlu Login", JOptionPane.WARNING_MESSAGE);
+                new LoginForm(this).setVisible(true);
+            } else {
+                new MembershipDialog(this).setVisible(true);
+            }
+        });
+
         JButton btnHistory = UIUtils.createSecondaryButton("Riwayat Bacaan");
         btnHistory.addActionListener(e -> {
             UserSession s = UserSession.getInstance();
@@ -161,6 +175,7 @@ public class BerandaForm extends JFrame {
         btnAuth.addActionListener(e -> handleAuthAction());
 
         rightPanel.add(lblUserBadge);
+        rightPanel.add(btnMembership);
         rightPanel.add(btnHistory);
         rightPanel.add(btnAuth);
         header.add(rightPanel, BorderLayout.EAST);
@@ -176,6 +191,18 @@ public class BerandaForm extends JFrame {
             lblUserBadge.setBackground(new Color(254, 226, 226));
             lblUserBadge.setBorder(BorderFactory.createCompoundBorder(
                     new LineBorder(new Color(252, 165, 165), 1),
+                    new EmptyBorder(4, 10, 4, 10)
+            ));
+        } else if (session.isVipMember()) {
+            lihatbuku.model.MembershipTransaction active = session.getActiveMembership();
+            String exp = (active != null && active.getEndDate() != null)
+                    ? active.getEndDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "-";
+            lblUserBadge.setText("Sesi: VIP MEMBER (" + session.getFullName() + ") [s/d " + exp + "]");
+            lblUserBadge.setForeground(COLOR_AMBER);
+            lblUserBadge.setOpaque(true);
+            lblUserBadge.setBackground(COLOR_AMBER_BG);
+            lblUserBadge.setBorder(BorderFactory.createCompoundBorder(
+                    new LineBorder(new Color(252, 211, 77), 1),
                     new EmptyBorder(4, 10, 4, 10)
             ));
         } else if (session.isRegistered()) {
@@ -264,6 +291,10 @@ public class BerandaForm extends JFrame {
         btnAdminAdd = UIUtils.createPrimaryButton("+ Tambah Buku", COLOR_GREEN);
         btnAdminAdd.addActionListener(e -> handleAdminAddBook());
         filterBar.add(btnAdminAdd);
+
+        btnAdminReport = UIUtils.createPrimaryButton("Cetak Laporan", COLOR_PRIMARY);
+        btnAdminReport.addActionListener(e -> new LaporanAdminDialog(this).setVisible(true));
+        filterBar.add(btnAdminReport);
         panel.add(filterBar, BorderLayout.NORTH);
 
         // Master-Detail Split Pane
@@ -553,6 +584,7 @@ public class BerandaForm extends JFrame {
     private void updateAdminControlsVisibility() {
         boolean isAdmin = UserSession.getInstance().isAdmin();
         if (btnAdminAdd != null) btnAdminAdd.setVisible(isAdmin);
+        if (btnAdminReport != null) btnAdminReport.setVisible(isAdmin);
         if (panelAdminActions != null) panelAdminActions.setVisible(isAdmin);
     }
 

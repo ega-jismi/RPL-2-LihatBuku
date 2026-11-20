@@ -57,4 +57,15 @@ public class UserDAO {
             return false;
         }
     }
+
+    public java.util.List<User> getAllUsers() {
+        SessionFactory sf = HibernateUtil.getSessionFactory();
+        if (sf == null) return new java.util.ArrayList<>();
+        try (Session session = sf.openSession()) {
+            return session.createQuery("FROM User ORDER BY id ASC", User.class).list();
+        } catch (Exception e) {
+            System.err.println("UserDAO.getAllUsers error: " + e.getMessage());
+            return new java.util.ArrayList<>();
+        }
+    }
 }

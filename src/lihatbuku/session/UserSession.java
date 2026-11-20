@@ -56,6 +56,18 @@ public class UserSession {
         return "REGISTERED".equalsIgnoreCase(this.role) || isAdmin();
     }
 
+    public boolean isVipMember() {
+        if (isAdmin()) return true;
+        if (!isRegistered() || userId <= 0) return false;
+        lihatbuku.model.MembershipTransaction active = getActiveMembership();
+        return active != null && active.isActive();
+    }
+
+    public lihatbuku.model.MembershipTransaction getActiveMembership() {
+        if (userId <= 0) return null;
+        return new lihatbuku.dao.MembershipTransactionDAO().getActiveMembership(userId);
+    }
+
     public int getUserId() { return userId; }
     public String getUsername() { return username; }
     public String getFullName() { return fullName; }
